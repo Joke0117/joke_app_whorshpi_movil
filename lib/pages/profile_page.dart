@@ -146,7 +146,7 @@ class _ProfilePageState extends State<ProfilePage>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Foto actualizada'),
+          content: Text('✅ Foto actualizada'),
           backgroundColor: Color(0xFF1976D2),
         ),
       );
