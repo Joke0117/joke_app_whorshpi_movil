@@ -13,17 +13,28 @@ class FooterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final buttonWidth = screenWidth / 4;
+    final mq = MediaQuery.of(context);
+    final screenW = mq.size.width;
+    final screenH = mq.size.height;
+
+    // Altura del footer adaptativa: ~10–11% de la pantalla, mín 70, máx 90
+    final footerH = (screenH * 0.105).clamp(70.0, 90.0);
+    // Padding horizontal adaptativo
+    final padH = screenW * 0.025;
+    // Tamaño de fuente adaptativo
+    final fontSize = (screenW * 0.032).clamp(10.0, 14.0);
+    // Tamaño de icono adaptativo
+    final iconSize = (screenW * 0.058).clamp(20.0, 26.0);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      height: footerH,
+      padding: EdgeInsets.symmetric(vertical: 6, horizontal: padH),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
-            Color(0xFF2C5364),
-            Color(0xFF203A43),
-            Color(0xFF0A1F44),
+            cardGradientStart,
+            cardGradientMiddle,
+            cardGradientEnd,
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -43,48 +54,94 @@ class FooterTabs extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _tabButton('Mayores', 0, icon: Icons.music_note, width: buttonWidth),
-          _tabButton('Menores', 1, icon: Icons.headphones, width: buttonWidth),
-          _tabButton('Información', 2, icon: Icons.music_video, width: buttonWidth),
+          _tabButton(
+            label: 'Mayores',
+            index: 0,
+            icon: Icons.music_note,
+            fontSize: fontSize,
+            iconSize: iconSize,
+          ),
+          _tabButton(
+            label: 'Menores',
+            index: 1,
+            icon: Icons.headphones,
+            fontSize: fontSize,
+            iconSize: iconSize,
+          ),
+          _tabButton(
+            label: 'Info',
+            index: 2,
+            icon: Icons.info_outline,
+            fontSize: fontSize,
+            iconSize: iconSize,
+          ),
         ],
       ),
     );
   }
 
-  Widget _tabButton(String label, int index, {required IconData icon, required double width}) {
+  Widget _tabButton({
+    required String label,
+    required int index,
+    required IconData icon,
+    required double fontSize,
+    required double iconSize,
+  }) {
     final bool isSelected = selectedIndex == index;
 
-    return SizedBox(
-      width: width,
-      height: 80,
-      child: OutlinedButton(
-        onPressed: () => onTabSelected(index),
-        style: OutlinedButton.styleFrom(
-          backgroundColor: isSelected ? activeButtonGradientStart : Color(0xFF101928),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.all(8),
-          side: BorderSide(color: isSelected ? activeButtonGradientEnd : buttonBorderColor, width: 1.5),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: isSelected ? textColor : accentTextColor, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isSelected ? textColor : accentTextColor,
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: GestureDetector(
+          onTap: () => onTabSelected(index),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? activeButtonGradientStart.withOpacity(0.85)
+                  : const Color(0xFF101928),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? activeButtonGradientEnd : buttonBorderColor,
+                width: 1.5,
               ),
-              textAlign: TextAlign.center,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: activeButtonGradientEnd.withOpacity(0.25),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                      ),
+                    ]
+                  : [],
             ),
-          ],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? textColor : accentTextColor,
+                  size: iconSize,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? textColor : accentTextColor,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
-

@@ -58,9 +58,9 @@ class _DeveloperInfoState extends State<DeveloperInfo> {
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [
-              Color(0xFF2C5364),
-              Color(0xFF101928),
-              Color(0xFF0A1F44),
+              cardGradientStart,
+              cardGradientMiddle,
+              cardGradientEnd,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
