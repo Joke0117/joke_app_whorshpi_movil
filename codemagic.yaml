@@ -15,13 +15,28 @@ workflows:
 
       - name: Instalar pods de iOS
         script: |
-          cd ios && pod install
+          cd ios && pod install --repo-update
 
-      - name: Compilar iOS sin firma
+      - name: Compilar iOS sin firma (forzado)
         script: |
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign \
+            --dart-define=FLUTTER_TARGET=lib/main.dart
+          
+          # Si flutter falla, intentar con xcodebuild directo
+          if [ $? -ne 0 ]; then
+            xcodebuild \
+              -workspace ios/Runner.xcworkspace \
+              -scheme Runner \
+              -configuration Release \
+              -sdk iphoneos \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              PROVISIONING_PROFILE="" \
+              build
+          fi
 
-      - name: Empaquetar IPA
+      - name: Empaquetar IPA sin firma
         script: |
           cd build/ios/iphoneos
           mkdir -p Payload
