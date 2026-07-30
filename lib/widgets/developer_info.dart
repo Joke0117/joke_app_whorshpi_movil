@@ -84,7 +84,7 @@ class _DeveloperInfoState extends State<DeveloperInfo> {
   }
 
   Widget _hoverableSocial({
-    required IconData icon,
+    required dynamic icon,
     required String text,
     required Color activeColor,
     required bool isActive,
