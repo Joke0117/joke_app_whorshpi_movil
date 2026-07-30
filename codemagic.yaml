@@ -1,0 +1,42 @@
+workflows:
+  ios-workflow:
+    name: Pad Worship iOS Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Obtener dependencias de Flutter
+        script: |
+          flutter pub get
+
+      - name: Instalar pods de iOS
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+
+      - name: Compilar iOS (sin firma - para simulador y AltStore)
+        script: |
+          flutter build ios --release --no-codesign
+
+      - name: Empaquetar como .ipa (sin firma para Sideloadly/AltStore)
+        script: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r ../../../PadWorship.ipa Payload
+          echo "✅ PadWorship.ipa generado exitosamente"
+
+    artifacts:
+      - PadWorship.ipa
+      - build/ios/iphoneos/**/*.app
+      - flutter_drive.log
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com  # 👈 Cambia esto por tu email real
+        notify:
+          success: true
+          failure: true
