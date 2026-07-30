@@ -43,26 +43,22 @@ workflows:
 
       - name: Compilar iOS
         script: |
-          # Compilar usando xcodebuild para asegurar que pase sin firma
-          xcodebuild clean build \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            EXPANDED_CODE_SIGN_IDENTITY=""
+          # Compilar usando flutter build ios para que el SDK procese todo
+          # Ignoramos si falla al final (por firma de Apple) con || true
+          flutter build ios --release --no-codesign || true
 
       - name: Empaquetar IPA sin firma
         script: |
           # Buscar la app generada
           APP_PATH=$(find build/ios -name "Runner.app" -type d | head -n 1)
           if [ -z "$APP_PATH" ]; then
-            # Si no está en build/ios, buscar en DerivedData (por xcodebuild)
             APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -type d | head -n 1)
-          end
+          fi
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR FATAL: No se generó la aplicación (Runner.app). La compilación de Flutter falló verdaderamente."
+            exit 1
+          fi
           
           echo "Encontrada APP en: $APP_PATH"
           
