@@ -12,34 +12,22 @@ class FooterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Al estilo Instagram: una barra inferior plana, fondo oscuro/negro, solo íconos.
     return Container(
-      color: const Color(0xFF000000), // Fondo negro tipo Instagram
+      color: const Color(0xFF000000),
       padding: EdgeInsets.only(
         top: 12,
-        bottom: MediaQuery.of(context).padding.bottom > 0 
-            ? MediaQuery.of(context).padding.bottom 
+        bottom: MediaQuery.of(context).padding.bottom > 0
+            ? MediaQuery.of(context).padding.bottom
             : 12,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildIcon(
-            index: 0,
-            iconSelected: Icons.library_music,
-            iconUnselected: Icons.library_music_outlined,
-          ),
-          _buildIcon(
-            index: 1,
-            iconSelected: Icons.headphones,
-            iconUnselected: Icons.headphones_outlined,
-          ),
-          _buildIcon(
-            index: 2,
-            iconSelected: Icons.info,
-            iconUnselected: Icons.info_outline,
-          ),
+          _buildIcon(index: 0, iconSelected: Icons.library_music, iconUnselected: Icons.library_music_outlined),
+          _buildIcon(index: 1, iconSelected: Icons.headphones, iconUnselected: Icons.headphones_outlined),
+          _buildIcon(index: 2, iconSelected: Icons.queue_music, iconUnselected: Icons.queue_music_rounded),
+          _buildIcon(index: 3, iconSelected: Icons.info, iconUnselected: Icons.info_outline),
         ],
       ),
     );
@@ -51,19 +39,19 @@ class FooterTabs extends StatelessWidget {
     required IconData iconUnselected,
   }) {
     final bool isSelected = selectedIndex == index;
-    
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onTabSelected(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Icon(
           isSelected ? iconSelected : iconUnselected,
-          color: isSelected ? Colors.white : Colors.white70,
-          size: 28,
+          color: isSelected ? Colors.white : Colors.white38,
+          size: 27,
         ),
       ),
     );
   }
 }
+
 

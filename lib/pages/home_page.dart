@@ -6,10 +6,10 @@ import '../widgets/pad_button.dart';
 import '../widgets/footer_tabs.dart';
 import '../widgets/developer_info.dart';
 import '../widgets/mini_player.dart';
-import '../widgets/audio_visualizer.dart';
 import '../theme/colors.dart';
 import '../widgets/worship_particles.dart';
 import 'profile_page.dart';
+import 'setlist_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -93,6 +93,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final isDeveloper = currentTab == 'developer';
+    final isSetlist = currentTab == 'setlist';
     final mq = MediaQuery.of(context);
     final screenH = mq.size.height;
     final screenW = mq.size.width;
@@ -209,6 +210,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 // ── Contenido principal ────────────────────────────────────
                 if (isDeveloper)
                   const Expanded(child: DeveloperInfo())
+                else if (isSetlist)
+                  Expanded(
+                    child: SetlistPage(
+                      onActivatePad: _activatePadFromSetlist,
+                    ),
+                  )
                 else
                   Expanded(
                     child: LayoutBuilder(
@@ -221,7 +228,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
                         final cellH = (availH - spacing * (rowCount - 1) - 2 * padV) / rowCount;
                         final cellW = constraints.maxWidth / crossAxisCount;
-                        // Relación de aspecto dinámica para que ocupen exactamente la pantalla sin desbordarse
                         double aspectRatio = cellW / cellH;
 
                         return Padding(
@@ -278,14 +284,28 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
+  /// Activa un pad desde el Setlist (cuando se abre la letra de una canción)
+  void _activatePadFromSetlist(String key, bool isMinor) {
+    setState(() {
+      currentTab = isMinor ? 'menores' : 'mayores';
+      currentNote = key;
+      currentNoteTitle = key
+          .replaceAll('sharp', '#')
+          .replaceAll('m', isMinor ? 'm' : '');
+      isPlaying = true;
+    });
+  }
+
   int _getTabIndex() {
     switch (currentTab) {
       case 'mayores':
         return 0;
       case 'menores':
         return 1;
-      case 'developer':
+      case 'setlist':
         return 2;
+      case 'developer':
+        return 3;
       default:
         return 0;
     }
@@ -298,6 +318,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       case 1:
         return 'menores';
       case 2:
+        return 'setlist';
+      case 3:
         return 'developer';
       default:
         return 'mayores';
