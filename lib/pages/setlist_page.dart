@@ -73,6 +73,8 @@ class _SetlistPageState extends State<SetlistPage> {
     widget.onActivatePad(song.key, song.isMinor);
     Navigator.of(context).push(
       PageRouteBuilder(
+        opaque: false, // Fondo transparente — se ve la app detrás
+        barrierColor: Colors.transparent,
         pageBuilder: (_, __, ___) => LyricsPage(song: song),
         transitionsBuilder: (_, anim, __, child) => SlideTransition(
           position: Tween<Offset>(

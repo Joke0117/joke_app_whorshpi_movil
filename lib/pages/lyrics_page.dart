@@ -42,19 +42,22 @@ class _LyricsPageState extends State<LyricsPage> {
     final mq = MediaQuery.of(context);
 
     return Scaffold(
+      // Fondo transparente para que se vea el gradiente del pad de fondo
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       body: Stack(
         children: [
-          // ── Mismo fondo degradado de la app ──────────────────────
+          // Overlay semitransparente del mismo color que los botones del pad
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF040C1A),
-                  Color(0xFF0A1F44),
-                  Color(0xFF0D2B60),
-                  Color(0xFF091428),
+                  const Color(0xFF040C1A).withOpacity(0.6),
+                  const Color(0xFF0A1F44).withOpacity(0.5),
+                  const Color(0xFF0D2B60).withOpacity(0.55),
+                  const Color(0xFF091428).withOpacity(0.6),
                 ],
               ),
             ),
