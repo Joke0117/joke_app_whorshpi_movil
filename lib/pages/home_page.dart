@@ -258,8 +258,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     ),
                   ),
 
-                const SizedBox(height: 8),
-
                 // ── Footer tabs ────────────────────────────────────────────
                 FooterTabs(
                   selectedIndex: _getTabIndex(),
