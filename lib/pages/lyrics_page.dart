@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/song.dart';
 
@@ -9,31 +10,210 @@ class LyricsPage extends StatefulWidget {
   State<LyricsPage> createState() => _LyricsPageState();
 }
 
-class _LyricsPageState extends State<LyricsPage> {
+class _LyricsPageState extends State<LyricsPage>
+    with SingleTickerProviderStateMixin {
   late final List<LyricBlock> _blocks;
   int _activeIndex = 0;
   late final PageController _pageController;
+
+  // ── Auto-avance ──────────────────────────────────────────────────────────
+  bool _autoPlay = false;
+  int _secondsPerSection = 24; // 8 compases × 4/4 a ~75 BPM
+  Timer? _autoTimer;
+  late AnimationController _progressCtrl;
 
   @override
   void initState() {
     super.initState();
     _blocks = widget.song.parsedBlocks;
     _pageController = PageController();
+    _progressCtrl = AnimationController(vsync: this);
   }
 
   @override
   void dispose() {
+    _autoTimer?.cancel();
+    _progressCtrl.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
+  // ── Navegación ───────────────────────────────────────────────────────────
   void _goTo(int index) {
-    if (index < 0 || index >= _blocks.length) return;
+    if (index < 0 || index >= _blocks.length) {
+      _stopAuto();
+      return;
+    }
     setState(() => _activeIndex = index);
     _pageController.animateToPage(
       index,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 350),
       curve: Curves.easeInOut,
+    );
+  }
+
+  // ── Auto-play ────────────────────────────────────────────────────────────
+  void _toggleAuto() {
+    if (_autoPlay) {
+      _stopAuto();
+    } else {
+      _startAuto();
+    }
+  }
+
+  void _startAuto() {
+    setState(() => _autoPlay = true);
+    _launchCycle();
+  }
+
+  void _launchCycle() {
+    _autoTimer?.cancel();
+    // Animación de la barra de cuenta regresiva
+    _progressCtrl.value = 0;
+    _progressCtrl.animateTo(
+      1.0,
+      duration: Duration(seconds: _secondsPerSection),
+      curve: Curves.linear,
+    );
+    // Timer de avance
+    _autoTimer = Timer(Duration(seconds: _secondsPerSection), () {
+      if (!mounted) return;
+      if (_activeIndex < _blocks.length - 1) {
+        _goTo(_activeIndex + 1);
+        _launchCycle();
+      } else {
+        _stopAuto();
+      }
+    });
+  }
+
+  void _stopAuto() {
+    _autoTimer?.cancel();
+    _progressCtrl.stop();
+    _progressCtrl.value = 0;
+    if (mounted) setState(() => _autoPlay = false);
+  }
+
+  // Al avanzar/retroceder manualmente durante auto, reinicia el ciclo
+  void _manualGoTo(int index) {
+    _goTo(index);
+    if (_autoPlay) _launchCycle();
+  }
+
+  // ── Cambio de velocidad ──────────────────────────────────────────────────
+  void _showSpeedSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0D1B3E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setLocal) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Segundos por sección',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '4/4 a 75 BPM — 8 compases = 24s',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.4),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Valor actual
+              Text(
+                '${_secondsPerSection}s',
+                style: const TextStyle(
+                  color: Color(0xFF4FC3F7),
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Slider
+              SliderTheme(
+                data: SliderThemeData(
+                  activeTrackColor: const Color(0xFF4FC3F7),
+                  inactiveTrackColor: Colors.white.withOpacity(0.1),
+                  thumbColor: const Color(0xFF4FC3F7),
+                  overlayColor: const Color(0xFF4FC3F7).withOpacity(0.2),
+                  trackHeight: 4,
+                ),
+                child: Slider(
+                  value: _secondsPerSection.toDouble(),
+                  min: 8,
+                  max: 60,
+                  divisions: 26,
+                  onChanged: (v) {
+                    setLocal(() {});
+                    setState(() => _secondsPerSection = v.round());
+                  },
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('8s  (4 comp.)',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.3), fontSize: 11)),
+                  Text('60s  (lento)',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.3), fontSize: 11)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Botón aplicar
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  if (_autoPlay) _launchCycle(); // reinicia con nuevo tiempo
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1565C0), Color(0xFF4FC3F7)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Aplicar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -42,12 +222,11 @@ class _LyricsPageState extends State<LyricsPage> {
     final mq = MediaQuery.of(context);
 
     return Scaffold(
-      // Fondo transparente para que se vea el gradiente del pad de fondo
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         children: [
-          // Overlay semitransparente del mismo color que los botones del pad
+          // Overlay semitransparente sobre el fondo del pad
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -63,11 +242,14 @@ class _LyricsPageState extends State<LyricsPage> {
             ),
           ),
 
-          // ── Páginas de letra ─────────────────────────────────────
+          // ── Páginas de letra ──────────────────────────────────────
           PageView.builder(
             controller: _pageController,
             itemCount: _blocks.length,
-            onPageChanged: (i) => setState(() => _activeIndex = i),
+            onPageChanged: (i) {
+              setState(() => _activeIndex = i);
+              if (_autoPlay) _launchCycle();
+            },
             itemBuilder: (context, index) => _LyricSlide(
               block: _blocks[index],
               isActive: index == _activeIndex,
@@ -98,7 +280,6 @@ class _LyricsPageState extends State<LyricsPage> {
               ),
               child: Row(
                 children: [
-                  // Botón cerrar
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
@@ -119,7 +300,6 @@ class _LyricsPageState extends State<LyricsPage> {
                     ),
                   ),
                   const SizedBox(width: 14),
-
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +310,6 @@ class _LyricsPageState extends State<LyricsPage> {
                             color: Colors.white,
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 0.2,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -139,20 +318,17 @@ class _LyricsPageState extends State<LyricsPage> {
                           Text(
                             widget.song.artist,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.4),
-                              fontSize: 12,
-                            ),
+                                color: Colors.white.withOpacity(0.4),
+                                fontSize: 12),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                       ],
                     ),
                   ),
-
-                  // Chip tonalidad — mismo estilo que los PadButtons
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: widget.song.isMinor
                           ? const Color(0xFF3D1F7A).withOpacity(0.5)
@@ -164,15 +340,6 @@ class _LyricsPageState extends State<LyricsPage> {
                             : const Color(0xFF4FC3F7),
                         width: 1.5,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (widget.song.isMinor
-                                  ? const Color(0xFF9C6FE4)
-                                  : const Color(0xFF4FC3F7))
-                              .withOpacity(0.25),
-                          blurRadius: 8,
-                        ),
-                      ],
                     ),
                     child: Text(
                       widget.song.keyDisplayName,
@@ -190,7 +357,7 @@ class _LyricsPageState extends State<LyricsPage> {
             ),
           ),
 
-          // ── Footer: indicadores + navegación ─────────────────────
+          // ── Footer: controles ────────────────────────────────────
           Positioned(
             bottom: 0,
             left: 0,
@@ -199,8 +366,8 @@ class _LyricsPageState extends State<LyricsPage> {
               padding: EdgeInsets.only(
                 bottom: mq.padding.bottom + 16,
                 top: 28,
-                left: 28,
-                right: 28,
+                left: 24,
+                right: 24,
               ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -215,29 +382,150 @@ class _LyricsPageState extends State<LyricsPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Barra de cuenta regresiva (solo visible en auto)
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    child: _autoPlay
+                        ? Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              children: [
+                                AnimatedBuilder(
+                                  animation: _progressCtrl,
+                                  builder: (_, __) => ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: _progressCtrl.value,
+                                      backgroundColor:
+                                          Colors.white.withOpacity(0.08),
+                                      color: const Color(0xFF4FC3F7),
+                                      minHeight: 3,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                AnimatedBuilder(
+                                  animation: _progressCtrl,
+                                  builder: (_, __) {
+                                    final remaining = ((_secondsPerSection *
+                                                (1 - _progressCtrl.value)))
+                                            .round();
+                                    return Text(
+                                      'Siguiente en ${remaining}s',
+                                      style: TextStyle(
+                                        color: const Color(0xFF4FC3F7)
+                                            .withOpacity(0.6),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+
+                  // Indicadores de puntos
                   if (_blocks.length > 1)
                     _DotIndicator(
                         count: _blocks.length, activeIndex: _activeIndex),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
+
+                  // Controles: anterior | ▶ auto | siguiente  +  ⚙ velocidad
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Anterior
                       _NavButton(
                         icon: Icons.arrow_back_ios_new_rounded,
                         enabled: _activeIndex > 0,
-                        onTap: () => _goTo(_activeIndex - 1),
+                        onTap: () => _manualGoTo(_activeIndex - 1),
                       ),
-                      Text(
-                        '${_activeIndex + 1} / ${_blocks.length}',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
-                          fontSize: 13,
-                        ),
+
+                      // Botón auto + velocidad
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Botón velocidad
+                          GestureDetector(
+                            onTap: _showSpeedSheet,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              margin: const EdgeInsets.only(right: 10),
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color(0xFF4FC3F7).withOpacity(0.06),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      const Color(0xFF4FC3F7).withOpacity(0.2),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.speed_rounded,
+                                color: Color(0xFF4FC3F7),
+                                size: 17,
+                              ),
+                            ),
+                          ),
+
+                          // Botón play/pause auto
+                          GestureDetector(
+                            onTap: _toggleAuto,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: _autoPlay
+                                    ? const LinearGradient(
+                                        colors: [
+                                          Color(0xFF1565C0),
+                                          Color(0xFF4FC3F7)
+                                        ],
+                                      )
+                                    : null,
+                                color: _autoPlay
+                                    ? null
+                                    : const Color(0xFF4FC3F7).withOpacity(0.1),
+                                border: Border.all(
+                                  color: const Color(0xFF4FC3F7)
+                                      .withOpacity(_autoPlay ? 0 : 0.4),
+                                  width: 1.5,
+                                ),
+                                boxShadow: _autoPlay
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFF4FC3F7)
+                                              .withOpacity(0.4),
+                                          blurRadius: 18,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : [],
+                              ),
+                              child: Icon(
+                                _autoPlay
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+
+                      // Siguiente
                       _NavButton(
                         icon: Icons.arrow_forward_ios_rounded,
                         enabled: _activeIndex < _blocks.length - 1,
-                        onTap: () => _goTo(_activeIndex + 1),
+                        onTap: () => _manualGoTo(_activeIndex + 1),
                       ),
                     ],
                   ),
@@ -251,7 +539,7 @@ class _LyricsPageState extends State<LyricsPage> {
   }
 }
 
-// ── Slide de letra ────────────────────────────────────────────────────────
+// ── Slide de letra ─────────────────────────────────────────────────────────
 class _LyricSlide extends StatelessWidget {
   final LyricBlock block;
   final bool isActive;
@@ -272,10 +560,10 @@ class _LyricSlide extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Etiqueta de sección
             if (block.section != null && !block.isInstruction) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF4FC3F7).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(20),
@@ -295,8 +583,6 @@ class _LyricSlide extends StatelessWidget {
               ),
               const SizedBox(height: 24),
             ],
-
-            // Instrucción de ejecución
             if (block.isInstruction)
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -336,7 +622,6 @@ class _LyricSlide extends StatelessWidget {
                 ),
               )
             else
-              // Letra — misma fuente y estilo blanco de la app
               Text(
                 block.content,
                 textAlign: TextAlign.center,
@@ -355,7 +640,7 @@ class _LyricSlide extends StatelessWidget {
   }
 }
 
-// ── Indicadores tipo Spotify ──────────────────────────────────────────────
+// ── Indicadores de puntos ──────────────────────────────────────────────────
 class _DotIndicator extends StatelessWidget {
   final int count;
   final int activeIndex;
@@ -386,7 +671,7 @@ class _DotIndicator extends StatelessWidget {
   }
 }
 
-// ── Botones anterior/siguiente ────────────────────────────────────────────
+// ── Botones anterior/siguiente ─────────────────────────────────────────────
 class _NavButton extends StatelessWidget {
   final IconData icon;
   final bool enabled;
