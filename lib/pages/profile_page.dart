@@ -145,9 +145,21 @@ class _ProfilePageState extends State<ProfilePage>
       setState(() => _isUpdating = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Foto actualizada'),
-          backgroundColor: Color(0xFF1976D2),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_outline_rounded,
+                  color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Text('Foto actualizada',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1976D2),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     } catch (e) {

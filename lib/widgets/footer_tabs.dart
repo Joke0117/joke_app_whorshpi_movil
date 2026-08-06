@@ -24,26 +24,20 @@ class FooterTabs extends StatelessWidget {
         top: 8,
       ),
       child: Container(
-        // Píldora flotante semitransparente, igual que Instagram
+        // Mismo estilo que los botones del pad: fondo semitransparente, borde sutil
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          // Fondo oscuro semitransparente con el mismo tono de los botones del pad
-          color: const Color(0xFF091428).withOpacity(0.82),
+          color: Colors.white.withOpacity(0.04), // Igual al botón inactivo del pad
           borderRadius: BorderRadius.circular(40),
           border: Border.all(
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withOpacity(0.15), // Mismo borde que los botones
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.35),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: const Color(0xFF4FC3F7).withOpacity(0.06),
-              blurRadius: 16,
-              spreadRadius: -4,
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),

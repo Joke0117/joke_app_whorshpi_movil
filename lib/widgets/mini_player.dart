@@ -11,7 +11,6 @@ class MiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
 
-    // Protección: si audioHandler no está inicializado, no mostrar nada
     try {
       // ignore: unnecessary_null_comparison
       if (audioHandler == null) return const SizedBox.shrink();
@@ -19,7 +18,6 @@ class MiniPlayer extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Usamos el stream del handler directamente (BehaviorSubject)
     return StreamBuilder<PlaybackState>(
       stream: audioHandler.playbackState.stream,
       builder: (context, snapshot) {
@@ -34,8 +32,7 @@ class MiniPlayer extends StatelessWidget {
             position: Tween<Offset>(
               begin: const Offset(0, 1),
               end: Offset.zero,
-            ).animate(
-                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: FadeTransition(opacity: anim, child: child),
           ),
           child: isActive
@@ -57,7 +54,6 @@ class _PlayerBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPlaying = state.playing;
 
-    // Usamos mediaItem del handler (también BehaviorSubject)
     return StreamBuilder<MediaItem?>(
       stream: audioHandler.mediaItem.stream,
       builder: (context, snap) {
@@ -98,12 +94,8 @@ class _PlayerBar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  // Icono animado de nota
                   _PulsingNoteIcon(isPlaying: isPlaying),
-
                   const SizedBox(width: 12),
-
-                  // Nombre de la nota
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,8 +121,6 @@ class _PlayerBar extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Botón Pausar / Reanudar
                   _ControlBtn(
                     icon: isPlaying
                         ? Icons.pause_rounded
@@ -145,10 +135,7 @@ class _PlayerBar extends StatelessWidget {
                       }
                     },
                   ),
-
                   const SizedBox(width: 8),
-
-                  // Botón Parar
                   _ControlBtn(
                     icon: Icons.stop_rounded,
                     color: Colors.redAccent,
@@ -158,7 +145,7 @@ class _PlayerBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              _ProgressBar(duration: item?.duration ?? const Duration(minutes: 10)),
+              const _ProgressBar(),
             ],
           ),
         );
@@ -167,11 +154,9 @@ class _PlayerBar extends StatelessWidget {
   }
 }
 
-// ── Barra de progreso real con tiempos ──────────────────────────────────────
+// ── Barra de progreso — tiempo real transcurrido ─────────────────────────────
 class _ProgressBar extends StatelessWidget {
-  final Duration duration;
-
-  const _ProgressBar({required this.duration});
+  const _ProgressBar();
 
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -185,41 +170,56 @@ class _ProgressBar extends StatelessWidget {
       stream: audioHandler.positionStream,
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
-        final progress = duration.inMilliseconds > 0
-            ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
-            : 0.0;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Barra animada sin fin (el pad es en vivo, sin duración fija)
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: progress,
+                value: null,
                 backgroundColor: Colors.white.withOpacity(0.08),
                 color: const Color(0xFF4FC3F7),
                 minHeight: 3,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Tiempo real transcurrido desde que arrancó el pad
                 Text(
                   _formatDuration(position),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withOpacity(0.55),
                     fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  _formatDuration(duration),
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
+                // Indicador "EN VIVO" con punto pulsante
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF4FC3F7),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'EN VIVO',
+                      style: TextStyle(
+                        color: const Color(0xFF4FC3F7).withOpacity(0.7),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -308,7 +308,7 @@ class _PulsingNoteIconState extends State<_PulsingNoteIcon>
   }
 }
 
-// ── Botón de control con feedback táctil ────────────────────────────────────
+// ── Botón de control ─────────────────────────────────────────────────────────
 class _ControlBtn extends StatefulWidget {
   final IconData icon;
   final Color color;
@@ -372,8 +372,7 @@ class _ControlBtnState extends State<_ControlBtn>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: widget.color.withOpacity(0.12),
-            border:
-                Border.all(color: widget.color.withOpacity(0.4), width: 1),
+            border: Border.all(color: widget.color.withOpacity(0.4), width: 1),
           ),
           child: Icon(widget.icon, color: widget.color, size: widget.size),
         ),
