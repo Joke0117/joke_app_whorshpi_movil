@@ -13,59 +13,36 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Forzar desactivación de firma en Xcode (Ruby)
-        script: |
-          cat << 'EOF' > disable_signing.rb
-          require 'xcodeproj'
-          project_path = 'ios/Runner.xcodeproj'
-          project = Xcodeproj::Project.open(project_path)
-          project.build_configurations.each do |config|
-            config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-            config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-            config.build_settings['CODE_SIGN_IDENTITY'] = ''
-            config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
-          end
-          project.targets.each do |target|
-            target.build_configurations.each do |config|
-              config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-              config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-              config.build_settings['CODE_SIGN_IDENTITY'] = ''
-              config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
-            end
-          end
-          project.save
-          EOF
-          ruby disable_signing.rb
-
       - name: Instalar pods de iOS
         script: |
           cd ios && pod install --repo-update
 
-      - name: Compilar iOS
+      - name: Compilar iOS (sin firma)
         script: |
-          # Compilar usando flutter build ios para que el SDK procese todo
-          # Ignoramos si falla al final (por firma de Apple) con || true
-          flutter build ios --release --no-codesign || true
-
-      - name: Empaquetar IPA sin firma
-        script: |
-          # Buscar la app generada
-          APP_PATH=$(find build/ios -name "Runner.app" -type d | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" -type d | head -n 1)
-          fi
+          flutter build ios --release --no-codesign
           
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR FATAL: No se generó la aplicación (Runner.app). La compilación de Flutter falló verdaderamente."
+          # Verificar que se generó el Runner.app con contenido real
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "ERROR: No se encontró Runner.app en $APP_PATH"
             exit 1
           fi
           
-          echo "Encontrada APP en: $APP_PATH"
+          SIZE=$(du -sm "$APP_PATH" | cut -f1)
+          echo "Runner.app pesa: ${SIZE}MB"
+          if [ "$SIZE" -lt 5 ]; then
+            echo "ERROR: Runner.app demasiado pequeño (${SIZE}MB), el build falló"
+            exit 1
+          fi
           
+          echo "Build exitoso. Empaquetando IPA..."
           mkdir -p Payload
-          cp -r "$APP_PATH" Payload/
+          cp -r "$APP_PATH" Payload/Runner.app
           zip -r PadWorship.ipa Payload
           rm -rf Payload
+          
+          IPA_SIZE=$(du -sm PadWorship.ipa | cut -f1)
+          echo "IPA generado: ${IPA_SIZE}MB"
 
     artifacts:
-      - "*.ipa"
+      - "PadWorship.ipa"
