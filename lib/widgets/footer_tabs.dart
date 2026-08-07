@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class FooterTabs extends StatefulWidget {
+class FooterTabs extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTabSelected;
 
@@ -9,40 +9,6 @@ class FooterTabs extends StatefulWidget {
     required this.selectedIndex,
     required this.onTabSelected,
   });
-
-  @override
-  State<FooterTabs> createState() => _FooterTabsState();
-}
-
-class _FooterTabsState extends State<FooterTabs> {
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(
-      initialPage: widget.selectedIndex,
-      viewportFraction: 0.25, // cada tab ocupa 25% del ancho
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant FooterTabs oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedIndex != widget.selectedIndex) {
-      _pageController.animateToPage(
-        widget.selectedIndex,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
 
   static const _tabs = [
     (Icons.library_music, Icons.library_music_outlined),
@@ -82,29 +48,20 @@ class _FooterTabsState extends State<FooterTabs> {
             ),
           ],
         ),
-        // PageView para deslizamiento horizontal + clic
-        child: PageView.builder(
-          controller: _pageController,
-          itemCount: _tabs.length,
-          physics: const BouncingScrollPhysics(),
-          onPageChanged: (index) => widget.onTabSelected(index),
-          itemBuilder: (context, index) {
+        // Fila fija de iconos
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(_tabs.length, (index) {
             final (iconSelected, iconUnselected) = _tabs[index];
-            final bool isSelected = widget.selectedIndex == index;
+            final bool isSelected = selectedIndex == index;
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () {
-                widget.onTabSelected(index);
-                _pageController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                );
-              },
+              onTap: () => onTabSelected(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Colors.white.withOpacity(0.12)
@@ -120,7 +77,7 @@ class _FooterTabsState extends State<FooterTabs> {
                 ),
               ),
             );
-          },
+          }),
         ),
       ),
     );

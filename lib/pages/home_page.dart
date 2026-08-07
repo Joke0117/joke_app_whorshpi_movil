@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   late AnimationController _controller;
   late Animation<double> _animation;
+  late PageController _pageController;
 
   List<String> get notes {
     return currentTab == 'mayores'
@@ -48,6 +49,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _animation = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+    _pageController = PageController(initialPage: _getTabIndex());
     _loadUser();
   }
 
@@ -87,6 +89,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    _pageController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -208,62 +211,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 // ── Mini player flotante ───────────────────────────────────
                 const MiniPlayer(),
 
-                // ── Contenido principal ────────────────────────────────────
-                if (isDeveloper)
-                  const Expanded(child: DeveloperInfo())
-                else if (isSetlist)
-                  Expanded(
-                    child: SetlistPage(
-                      onActivatePad: _activatePadFromSetlist,
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth < 400 ? 2 : 3;
-                        final rowCount = (notes.length / crossAxisCount).ceil();
-                        final availH = constraints.maxHeight;
-                        const spacing = 5.0;
-                        const padV = 6.0;
-
-                        final cellH = (availH - spacing * (rowCount - 1) - 2 * padV) / rowCount;
-                        final cellW = constraints.maxWidth / crossAxisCount;
-                        double aspectRatio = cellW / cellH;
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: padV),
-                          child: GridView.count(
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: EdgeInsets.symmetric(
-                                horizontal: screenW * 0.04),
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: spacing,
-                            mainAxisSpacing: spacing,
-                            childAspectRatio: aspectRatio,
-                            children: notes.map((note) {
-                              return PadButton(
-                                key: ValueKey('${currentTab}_$note'),
-                                note: note,
-                                currentNote: currentNote,
-                                onNoteChanged: (newNote) {
-                                  setState(() {
-                                    if (currentNote != newNote) {
-                                      currentNote = newNote;
-                                      currentNoteTitle = newNote.isEmpty
-                                          ? 'Pad Worship'
-                                          : newNote.replaceAll('sharp', '#');
-                                      isPlaying = newNote.isNotEmpty;
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        );
-                      },
-                    ),
+                // ── Contenido principal (Deslizable) ────────────────────────
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
+                    onPageChanged: (index) {
+                      setState(() {
+                        currentTab = _getTabFromIndex(index);
+                        if (currentNote.isEmpty) {
+                          currentNoteTitle = 'Pad Worship';
+                        }
+                      });
+                    },
+                    children: [
+                      // Pagina 0: Mayores
+                      _buildPadsGrid(mq, 'mayores'),
+                      // Pagina 1: Menores
+                      _buildPadsGrid(mq, 'menores'),
+                      // Pagina 2: Setlist
+                      SetlistPage(
+                        onActivatePad: _activatePadFromSetlist,
+                      ),
+                      // Pagina 3: Developer
+                      const DeveloperInfo(),
+                    ],
                   ),
+                ),
 
                 // ── Footer tabs ────────────────────────────────────────────
                 FooterTabs(
@@ -275,6 +249,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         currentNoteTitle = 'Pad Worship';
                       }
                     });
+                    _pageController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                    );
                   },
                 ),
               ],
@@ -336,5 +315,56 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       default:
         return 'mayores';
     }
+  }
+
+  Widget _buildPadsGrid(MediaQueryData mq, String tab) {
+    final isMinor = tab == 'menores';
+    final tabNotes = isMinor 
+      ? ['Cm', 'Csharpm', 'Dm', 'Dsharpm', 'Em', 'Fm', 'Fsharpm', 'Gm', 'Gsharpm', 'Am', 'Asharpm', 'Bm']
+      : ['C', 'Csharp', 'D', 'Dsharp', 'E', 'F', 'Fsharp', 'G', 'Gsharp', 'A', 'Asharp', 'B'];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth < 400 ? 2 : 3;
+        final rowCount = (tabNotes.length / crossAxisCount).ceil();
+        final availH = constraints.maxHeight;
+        const spacing = 5.0;
+        const padV = 6.0;
+
+        final cellH = (availH - spacing * (rowCount - 1) - 2 * padV) / rowCount;
+        final cellW = constraints.maxWidth / crossAxisCount;
+        double aspectRatio = cellW / cellH;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: padV),
+          child: GridView.count(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.symmetric(horizontal: mq.size.width * 0.04),
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            childAspectRatio: aspectRatio,
+            children: tabNotes.map((note) {
+              return PadButton(
+                key: ValueKey('${tab}_$note'),
+                note: note,
+                currentNote: currentNote,
+                onNoteChanged: (newNote) {
+                  setState(() {
+                    if (currentNote != newNote) {
+                      currentNote = newNote;
+                      currentNoteTitle = newNote.isEmpty
+                          ? 'Pad Worship'
+                          : newNote.replaceAll('sharp', '#');
+                      isPlaying = newNote.isNotEmpty;
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
   }
 }
