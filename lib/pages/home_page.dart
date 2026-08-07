@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../main.dart';
 import '../widgets/pad_button.dart';
 import '../widgets/footer_tabs.dart';
 import '../widgets/developer_info.dart';

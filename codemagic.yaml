@@ -36,21 +36,22 @@ workflows:
         script: |
           flutter build ios --release --no-codesign
 
-          APP="build/ios/iphoneos/Runner.app"
-          if [ ! -d "$APP" ]; then
-            echo "ERROR: Runner.app no encontrado en $APP"
-            find build/ios -name "*.app" -type d 2>/dev/null | head -5
+          # La ruta puede variar: buscar Runner.app en todo build/ios
+          APP=$(find build/ios -name "Runner.app" -type d | head -n 1)
+          if [ -z "$APP" ]; then
+            echo "ERROR: Runner.app no encontrado en build/ios"
             exit 1
           fi
-
           SIZE=$(du -sm "$APP" | cut -f1)
-          echo "Runner.app: ${SIZE}MB"
+          echo "Runner.app: ${SIZE}MB en $APP"
+          echo "APP_PATH=$APP" > /tmp/app_path.env
 
       - name: Empaquetar IPA
         script: |
-          APP="build/ios/iphoneos/Runner.app"
+          source /tmp/app_path.env
+          echo "Empaquetando: $APP_PATH"
           mkdir -p Payload
-          cp -r "$APP" Payload/Runner.app
+          cp -r "$APP_PATH" Payload/Runner.app
           zip -r PadWorship.ipa Payload
           rm -rf Payload
           echo "IPA final: $(du -sm PadWorship.ipa | cut -f1)MB"
