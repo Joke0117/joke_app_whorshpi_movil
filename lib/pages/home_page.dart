@@ -284,8 +284,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  /// Activa un pad desde el Setlist (cuando se abre la letra de una canción)
   void _activatePadFromSetlist(String key, bool isMinor) {
+    try {
+      audioHandler.stopNote();
+    } catch (e) {
+      debugPrint('Error stopping note: $e');
+    }
+
     setState(() {
       currentTab = isMinor ? 'menores' : 'mayores';
       currentNote = key;
@@ -294,6 +299,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           .replaceAll('m', isMinor ? 'm' : '');
       isPlaying = true;
     });
+
+    try {
+      audioHandler.playNote('assets/sounds/$key.mp3');
+    } catch (e) {
+      debugPrint('Error playing note: $e');
+    }
   }
 
   int _getTabIndex() {
