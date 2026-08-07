@@ -13,51 +13,53 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Desactivar firma en project.pbxproj
+        script: |
+          python3 - <<'PYEOF'
+          import re, sys
+
+          path = 'ios/Runner.xcodeproj/project.pbxproj'
+          with open(path, 'r') as f:
+              content = f.read()
+
+          # Vaciar ajustes de firma
+          content = re.sub(r'DEVELOPMENT_TEAM = [^;]*;', 'DEVELOPMENT_TEAM = "";', content)
+          content = re.sub(r'CODE_SIGN_IDENTITY = [^;]*;', 'CODE_SIGN_IDENTITY = "";', content)
+          content = re.sub(r'CODE_SIGNING_REQUIRED = [^;]*;', 'CODE_SIGNING_REQUIRED = NO;', content)
+          content = re.sub(r'CODE_SIGNING_ALLOWED = [^;]*;', 'CODE_SIGNING_ALLOWED = NO;', content)
+          content = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = [^;]*;', 'PROVISIONING_PROFILE_SPECIFIER = "";', content)
+          content = re.sub(r'PROVISIONING_PROFILE = [^;]*;', 'PROVISIONING_PROFILE = "";', content)
+
+          with open(path, 'w') as f:
+              f.write(content)
+
+          print("project.pbxproj actualizado — firma desactivada.")
+          PYEOF
+
       - name: Instalar pods de iOS
         script: |
           cd ios && pod install --repo-update
 
-      - name: Archivar con xcodebuild (sin firma)
+      - name: Compilar Flutter (sin firma)
         script: |
-          xcodebuild archive \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath build/Runner.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            EXPANDED_CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE="" \
-            PROVISIONING_PROFILE_SPECIFIER="" | xcpretty
+          flutter build ios --release --no-codesign
 
-          echo "Archivado exitoso."
-          find build/Runner.xcarchive -name "Runner.app" -type d
-
-      - name: Empaquetar IPA desde xcarchive
-        script: |
-          APP_PATH=$(find build/Runner.xcarchive/Products/Applications -name "Runner.app" -type d | head -n 1)
-
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No se encontró Runner.app dentro del xcarchive"
-            find build/Runner.xcarchive -type d | head -20
+          APP="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP" ]; then
+            echo "ERROR: Runner.app no generado en $APP"
             exit 1
           fi
+          SIZE=$(du -sm "$APP" | cut -f1)
+          echo "Runner.app: ${SIZE}MB en $APP"
 
-          SIZE=$(du -sm "$APP_PATH" | cut -f1)
-          echo "Runner.app: $APP_PATH (${SIZE}MB)"
-
-          if [ "$SIZE" -lt 20 ]; then
-            echo "ADVERTENCIA: Runner.app pesa solo ${SIZE}MB (puede ser incompleto)"
-          fi
-
+      - name: Empaquetar IPA
+        script: |
+          APP="build/ios/iphoneos/Runner.app"
           mkdir -p Payload
-          cp -r "$APP_PATH" Payload/Runner.app
+          cp -r "$APP" Payload/Runner.app
           zip -r PadWorship.ipa Payload
           rm -rf Payload
-
-          echo "IPA final: $(du -sm PadWorship.ipa | cut -f1)MB"
+          echo "IPA: $(du -sm PadWorship.ipa | cut -f1)MB"
 
     artifacts:
       - "PadWorship.ipa"
