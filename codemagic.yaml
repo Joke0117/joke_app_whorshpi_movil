@@ -13,28 +13,20 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Desactivar firma en project.pbxproj
+      - name: Desactivar firma via xcconfig (Flutter no lo sobreescribe)
         script: |
-          python3 - <<'PYEOF'
-          import re, sys
+          # Flutter sobreescribe project.pbxproj pero NO los xcconfig
+          # Agregar settings al Release.xcconfig que siempre se incluye en el build
+          cat >> ios/Flutter/Release.xcconfig << 'EOF'
+          DEVELOPMENT_TEAM=AAAAAAAAAA
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGN_IDENTITY=
+          PROVISIONING_PROFILE_SPECIFIER=
+          EOF
 
-          path = 'ios/Runner.xcodeproj/project.pbxproj'
-          with open(path, 'r') as f:
-              content = f.read()
-
-          # Vaciar ajustes de firma
-          content = re.sub(r'DEVELOPMENT_TEAM = [^;]*;', 'DEVELOPMENT_TEAM = "";', content)
-          content = re.sub(r'CODE_SIGN_IDENTITY = [^;]*;', 'CODE_SIGN_IDENTITY = "";', content)
-          content = re.sub(r'CODE_SIGNING_REQUIRED = [^;]*;', 'CODE_SIGNING_REQUIRED = NO;', content)
-          content = re.sub(r'CODE_SIGNING_ALLOWED = [^;]*;', 'CODE_SIGNING_ALLOWED = NO;', content)
-          content = re.sub(r'PROVISIONING_PROFILE_SPECIFIER = [^;]*;', 'PROVISIONING_PROFILE_SPECIFIER = "";', content)
-          content = re.sub(r'PROVISIONING_PROFILE = [^;]*;', 'PROVISIONING_PROFILE = "";', content)
-
-          with open(path, 'w') as f:
-              f.write(content)
-
-          print("project.pbxproj actualizado — firma desactivada.")
-          PYEOF
+          echo "Release.xcconfig actualizado:"
+          cat ios/Flutter/Release.xcconfig
 
       - name: Instalar pods de iOS
         script: |
@@ -46,11 +38,13 @@ workflows:
 
           APP="build/ios/iphoneos/Runner.app"
           if [ ! -d "$APP" ]; then
-            echo "ERROR: Runner.app no generado en $APP"
+            echo "ERROR: Runner.app no encontrado en $APP"
+            find build/ios -name "*.app" -type d 2>/dev/null | head -5
             exit 1
           fi
+
           SIZE=$(du -sm "$APP" | cut -f1)
-          echo "Runner.app: ${SIZE}MB en $APP"
+          echo "Runner.app: ${SIZE}MB"
 
       - name: Empaquetar IPA
         script: |
@@ -59,7 +53,7 @@ workflows:
           cp -r "$APP" Payload/Runner.app
           zip -r PadWorship.ipa Payload
           rm -rf Payload
-          echo "IPA: $(du -sm PadWorship.ipa | cut -f1)MB"
+          echo "IPA final: $(du -sm PadWorship.ipa | cut -f1)MB"
 
     artifacts:
       - "PadWorship.ipa"
