@@ -73,8 +73,6 @@ class _SetlistPageState extends State<SetlistPage> {
     widget.onActivatePad(song.key, song.isMinor);
     Navigator.of(context).push(
       PageRouteBuilder(
-        opaque: false, // Fondo transparente — se ve la app detrás
-        barrierColor: Colors.transparent,
         pageBuilder: (_, __, ___) => LyricsPage(song: song),
         transitionsBuilder: (_, anim, __, child) => SlideTransition(
           position: Tween<Offset>(
@@ -89,99 +87,69 @@ class _SetlistPageState extends State<SetlistPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Column(
       children: [
-        // Mismo fondo degradado de la app
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF040C1A),
-                Color(0xFF0A1F44),
-                Color(0xFF0D2B60),
-                Color(0xFF091428),
-              ],
-            ),
-          ),
-        ),
-
-        Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pad Worship',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.white.withOpacity(0.5),
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Setlist',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded,
-                        color: Color(0xFF4FC3F7), size: 30),
-                    onPressed: () => _openEditor(),
-                    tooltip: 'Agregar canción',
+                  Text(
+                    'Setlist',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ],
               ),
-            ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline_rounded,
+                    color: Color(0xFF4FC3F7), size: 30),
+                onPressed: () => _openEditor(),
+                tooltip: 'Agregar canción',
+              ),
+            ],
+          ),
+        ),
 
-            // Lista
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: Color(0xFF4FC3F7)))
-                  : _songs.isEmpty
-                      ? _EmptyState(onAdd: () => _openEditor())
-                      : ReorderableListView.builder(
-                          padding: const EdgeInsets.only(
-                              bottom: 24, top: 4, left: 16, right: 16),
-                          itemCount: _songs.length,
-                          onReorder: (oldIndex, newIndex) {
-                            if (newIndex > oldIndex) newIndex--;
-                            final list = List<Song>.from(_songs);
-                            final item = list.removeAt(oldIndex);
-                            list.insert(newIndex, item);
-                            setState(() => _songs = list);
-                            SongService.reorder(list);
-                          },
-                          itemBuilder: (context, index) {
-                            final song = _songs[index];
-                            return _SongTile(
-                              key: ValueKey(song.id),
-                              song: song,
-                              onTap: () => _openLyrics(song),
-                              onEdit: () => _openEditor(song: song),
-                              onDelete: () => _delete(song),
-                            );
-                          },
-                        ),
-            ),
-          ],
+        // Lista
+        Expanded(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                      color: Color(0xFF4FC3F7)))
+              : _songs.isEmpty
+                  ? _EmptyState(onAdd: () => _openEditor())
+                  : ReorderableListView.builder(
+                      padding: const EdgeInsets.only(
+                          bottom: 24, top: 4, left: 16, right: 16),
+                      itemCount: _songs.length,
+                      onReorder: (oldIndex, newIndex) {
+                        if (newIndex > oldIndex) newIndex--;
+                        final list = List<Song>.from(_songs);
+                        final item = list.removeAt(oldIndex);
+                        list.insert(newIndex, item);
+                        setState(() => _songs = list);
+                        SongService.reorder(list);
+                      },
+                      itemBuilder: (context, index) {
+                        final song = _songs[index];
+                        return _SongTile(
+                          key: ValueKey(song.id),
+                          song: song,
+                          onTap: () => _openLyrics(song),
+                          onEdit: () => _openEditor(song: song),
+                          onDelete: () => _delete(song),
+                        );
+                      },
+                    ),
         ),
       ],
     );

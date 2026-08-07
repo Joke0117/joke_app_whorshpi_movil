@@ -222,21 +222,19 @@ class _LyricsPageState extends State<LyricsPage>
     final mq = MediaQuery.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBody: true,
       body: Stack(
         children: [
-          // Overlay semitransparente sobre el fondo del pad
+          // Fondo sólido degradado
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF040C1A).withOpacity(0.6),
-                  const Color(0xFF0A1F44).withOpacity(0.5),
-                  const Color(0xFF0D2B60).withOpacity(0.55),
-                  const Color(0xFF091428).withOpacity(0.6),
+                  Color(0xFF040C1A),
+                  Color(0xFF0A1F44),
+                  Color(0xFF0D2B60),
+                  Color(0xFF091428),
                 ],
               ),
             ),
