@@ -17,32 +17,53 @@ workflows:
         script: |
           cd ios && pod install --repo-update
 
-      - name: Compilar iOS (sin firma)
+      - name: Generar archivos Flutter para iOS
         script: |
-          flutter build ios --release --no-codesign
-          
-          # Verificar que se generó el Runner.app con contenido real
-          APP_PATH="build/ios/iphoneos/Runner.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "ERROR: No se encontró Runner.app en $APP_PATH"
+          # Genera los archivos .dart_tool y el código generado sin intentar compilar
+          flutter build ios --release --no-codesign 2>&1 || true
+
+      - name: Compilar con xcodebuild (sin firma)
+        script: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            -derivedDataPath build/ios/derivedData \
+            build | xcpretty
+
+      - name: Empaquetar IPA
+        script: |
+          # El Runner.app queda en derivedData
+          APP_PATH=$(find build/ios/derivedData -name "Runner.app" -type d | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: No se encontró Runner.app"
+            find build/ios -name "*.app" -type d 2>/dev/null
             exit 1
           fi
-          
+
           SIZE=$(du -sm "$APP_PATH" | cut -f1)
-          echo "Runner.app pesa: ${SIZE}MB"
+          echo "Runner.app encontrado en: $APP_PATH (${SIZE}MB)"
+
           if [ "$SIZE" -lt 5 ]; then
-            echo "ERROR: Runner.app demasiado pequeño (${SIZE}MB), el build falló"
+            echo "ERROR: Runner.app muy pequeño (${SIZE}MB), build fallido"
             exit 1
           fi
-          
-          echo "Build exitoso. Empaquetando IPA..."
+
           mkdir -p Payload
           cp -r "$APP_PATH" Payload/Runner.app
           zip -r PadWorship.ipa Payload
           rm -rf Payload
-          
-          IPA_SIZE=$(du -sm PadWorship.ipa | cut -f1)
-          echo "IPA generado: ${IPA_SIZE}MB"
+
+          echo "IPA generado: $(du -sm PadWorship.ipa | cut -f1)MB"
 
     artifacts:
       - "PadWorship.ipa"
